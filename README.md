@@ -1,2 +1,2 @@
-# name
-This is readme
+# 沙龙自动签到系统
+基于探针MAC地址检测的签到系统
