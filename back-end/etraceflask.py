@@ -7,8 +7,15 @@ import redis
 import re
 import time
 import psycopg2
+import os
 
-app = Flask(__name__)
+DEBUG=True
+if DEBUG and not os.path.exists('main.html') \
+        and os.path.exists(os.path.join('..','front-end','main.html')):
+    # add this to config the template folder in debug mode.
+    app = Flask(__name__,template_folder='../front-end')
+else:
+    app = Flask(__name__)
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -27,15 +34,12 @@ class Record(object):
 
 
 def mac_standard(mac):
-    if re.match(r'[A-F\d]{1,2}:[A-F\d]{1,2}:[A-F\d]{1,2}:[A-F\d]{1,2}:[A-F\d]{1,2}:[A-F\d]{1,2}', mac,
+    # the regex pattern could be simplified as below.
+    if re.match(r'([A-F\d]{1,2}:){3}([A-F\d]{1,2})', mac,
                 re.M | re.I):
         hexs = mac.split(':')
-        hexs_process = []
-        for _hex in hexs:
-            if len(_hex) == 1:
-                hexs_process.append("0" + _hex)
-            else:
-                hexs_process.append(_hex)
+    # could be simplified with function format
+        hexs_process = [format(int(_hex,16),'0>2x') for _hex in hexs]
         return ":".join(hexs_process)
 
     else:
@@ -65,9 +69,9 @@ def index():
 def api_input():
     pool = redis.ConnectionPool(host='localhost', port=6379)
     r = redis.Redis(connection_pool=pool)
-
+    # Will it raise an exception if the form of request does not contain the key 'mac'?
     mac = request.form['mac'].encode(encoding='utf-8').upper()
-    if not re.match(r'[A-F\d]{2}:[A-F\d]{2}:[A-F\d]{2}:[A-F\d]{2}:[A-F\d]{2}:[A-F\d]{2}', mac, re.M | re.I):
+    if not re.match(r'([A-F\d]{1,2}:){3}([A-F\d]{1,2})', mac, re.M | re.I):
         return '["false","mac_not_correct"]'
 
     name = request.form['name'].encode(encoding='utf-8')
@@ -130,8 +134,7 @@ def api_mac_post():
         return '["false","unknown"]'
 
     try:
-        conn = psycopg2.connect(database="sunhaobomac", user="postgres", password="postgres", host="127.0.0.1",
-                                port="5432")
+        conn = psycopg2.connect(database="sunhaobomac", user="postgre", password="postgre", host="127.0.0.1", port="5432")
         if conn is None:
             print '["false","db_connect_error"]'
         cur = conn.cursor()
